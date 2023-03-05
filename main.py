@@ -8,13 +8,15 @@ app = Flask(__name__)
 CORS(app)
 
 # Connect DataBase
-conn = mysql.connector.connect(host='localhost', port="3306",user='suresh',password='suresh',database='test')
+conn = mysql.connector.connect(host='localhost', port="3306",user='suresh',password='suresh',database='ecommerce')
 cursor = conn.cursor()
 
 # Base Route
 @app.route('/')
 def index():
     return "Welcome to eCommerce REST API."
+
+# ------------------------------------------------------------  USERS ----------------------------------------------------------------------------------
 
 # CREAT USER
 @app.route('/createUser',methods=["POST"])
@@ -27,30 +29,30 @@ def createUser():
         if row == "email":
             chk1 = getInfo[row]
 
-        if row == "phone_number":
+        if row == "password":
             chk2 = getInfo[row]
 
         if(chk1 != ""  and chk2 != ""):
             # Verification for Email Alredy Exist or not.
-            query_string = "SELECT * FROM ecommerce_users WHERE email LIKE %s"
+            query_string = "SELECT * FROM users WHERE email LIKE %s"
             cursor.execute(query_string, [str(chk1)])
             isEmail = cursor.fetchall()
 
             # Verification for Phone Number Alredy Exist or not.
-            query_string = "SELECT * FROM ecommerce_users WHERE phone_number LIKE %s"
+            query_string = "SELECT * FROM users WHERE password LIKE %s"
             cursor.execute(query_string, [str(chk2)])
-            isPhnNum = cursor.fetchall()
+            isPwd = cursor.fetchall()
 
-            if(isEmail.__len__() == 1 and  isPhnNum.__len__() == 1):
-                return { "status": 422, "response": { "data" : "User Already Exists with " + chk1 + " Email and " + chk2 + " Phone_number." } }
+            if(isEmail.__len__() == 1 and  isPwd.__len__() == 1):
+                return { "status": 422, "response": { "data" : "User Already Exists with " + chk1 + " Email and " + chk2 + " Password." } }
             elif (isEmail.__len__() == 1):
                 return { "status": 422, "response": { "data" :  "User Already Exists with " + chk1 + " Email." } }
-            elif (isPhnNum.__len__() == 1):
-                return { "status": 422, "response": { "data" : "User Already Exists with " + chk2  + " Phone_number."} }
+            elif (isPwd.__len__() == 1):
+                return { "status": 422, "response": { "data" : "User Already Exists with " + chk2  + " Password."} }
             else:
                 print("getInfo : ",getInfo)
-                sql = "INSERT INTO `ecommerce_users` (`id`,`username`, `password`, `email`, `phone_number`, `address`, `photo`) VALUES (%s, %s, %s, %s, %s, %s, %s)"
-                data = ("NULL",getInfo['username'], getInfo['password'], getInfo['email'],getInfo['phone_number'], getInfo['address'], getInfo['photo'])
+                sql = "INSERT INTO `users` (`id`,`username`, `email`,`password`) VALUES (%s, %s, %s, %s)"
+                data = ("NULL",getInfo['username'], getInfo['email'], getInfo['password'])
 
                 cursor.execute(sql, data)
                 conn.commit()
@@ -63,7 +65,7 @@ def userLogin():
     getInfo = json.loads(request.data)
     print("getInfo",getInfo)
 
-    query_string = "SELECT * FROM ecommerce_users WHERE email LIKE %s AND password LIKE %s"
+    query_string = "SELECT * FROM users WHERE email LIKE %s AND password LIKE %s"
     cursor.execute(query_string, [str(getInfo['email']), str(getInfo['password'])])
     resp = cursor.fetchall()
 
@@ -79,14 +81,14 @@ def userLogin():
 # GET USER
 @app.route('/getUserInfo',methods=["GET"])
 def getUserInfo():
-    selectquery = "SELECT * FROM `ecommerce_users`"
+    selectquery = "SELECT * FROM `users`"
     cursor.execute(selectquery)
 
     records = cursor.fetchall()
 
     result_list = []
     for info in records:
-        result_list.append({"id" : info[0], "username" : info[1], "password": info[2], "email" : info[3],"phone_number" : info[4],"address" : info[5],"photo" : str(info[6])})
+        result_list.append({"id" : info[0], "username" : info[1], "email" : info[2],"password": info[3]})
 
     return result_list
 
@@ -98,13 +100,32 @@ def updateUser():
     # Get Query Params Values
     queryParam = request.args.get("id", type=str)
 
-    sql = "UPDATE `ecommerce_users` SET `username` = %s, `password` = %s,`email` = %s,`phone_number` = %s,`address` = %s,`photo` = %s WHERE `ecommerce_users`.`id` = %s"
-    data = (getInfo['username'], getInfo['password'], getInfo['email'], getInfo['phone_number'], getInfo['address'],getInfo['photo'],queryParam)
+    sql = "UPDATE `users` SET `username` = %s, `email` = %s,`password` = %s WHERE `users`.`id` = %s"
+    data = (getInfo['username'], getInfo['email'], getInfo['password'],int(queryParam))
 
     cursor.execute(sql, data)
     conn.commit()
 
     return "User Info Updated Successfully."
+
+# ------------------------------------------------------------  PRODUCTS  ----------------------------------------------------------------------------------
+
+# GET Products
+@app.route('/getProducts',methods=["GET"])
+def getProducts():
+    selectquery = "SELECT * FROM `products`"
+    cursor.execute(selectquery)
+
+    records = cursor.fetchall()
+
+    result_list = []
+    for info in records:
+        result_list.append({"id" : info[0], "productname" : info[1], "price": info[2], "quantity" : info[3]})
+    return result_list
+    # if(result_list.__len__() > 0):
+    #     return { "status": 200, "data":  result_list}
+    # else:
+    #     return { "status": 400, "data": {}}
 
 # Running Port
 app.run(port=8000)
